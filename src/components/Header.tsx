@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useGame } from '../context/GameContext';
 import { SunMoon, Menu, X, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -103,25 +104,27 @@ const Header: React.FC = () => {
         )}
       </AnimatePresence>
       
-      {/* Rules modal */}
-      <AnimatePresence>
-        {showRules && (
+      {/* Rules modal - render in portal */}
+      {showRules && createPortal(
+        <AnimatePresence>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/60 flex items-start sm:items-center justify-center p-4 pt-8 sm:pt-4 overflow-y-auto"
+            style={{ zIndex: 99999 }}
             onClick={() => setShowRules(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-md w-full max-h-[80vh] overflow-auto"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 sm:p-6 max-w-sm sm:max-w-md w-full max-h-[calc(100vh-4rem)] overflow-y-auto my-auto relative"
+              style={{ zIndex: 100000 }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">How to Play</h2>
+                <h2 className="text-lg sm:text-xl font-bold">How to Play</h2>
                 <button 
                   className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={() => setShowRules(false)}
@@ -130,32 +133,40 @@ const Header: React.FC = () => {
                 </button>
               </div>
               
-              <div className="space-y-4">
-                <p>Chain Reaction is a word association game. Build chains of related words to score points!</p>
+              <div className="space-y-3">
+                <p className="text-xs sm:text-sm">Build chains of words related to today's theme!</p>
                 
                 <div>
-                  <h3 className="font-bold mb-1">Rules:</h3>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Start with the daily word</li>
-                    <li>Form new words by selecting letters from the grid</li>
-                    <li>Each new word must be associated with the current active word</li>
-                    <li>Words must be at least 3 letters long</li>
-                    <li>Each valid word becomes the new active word</li>
-                    <li>Build the longest chain possible in 2 minutes</li>
+                  <h3 className="font-bold mb-1 text-xs sm:text-sm">Rules:</h3>
+                  <ul className="list-disc pl-3 sm:pl-4 space-y-0.5 text-xs sm:text-sm">
+                    <li>Start with today's thematic word</li>
+                    <li>Tap letters in any order to form words</li>
+                    <li>All words must relate to the theme</li>
+                    <li>Minimum 3 letters, no reusing words</li>
+                    <li>2 minutes to build the longest chain</li>
                   </ul>
                 </div>
                 
                 <div>
-                  <h3 className="font-bold mb-1">Scoring:</h3>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Points based on word length</li>
-                    <li>Bonus points for rare word associations</li>
-                    <li>Build your score by creating long chains</li>
+                  <h3 className="font-bold mb-1 text-xs sm:text-sm">Scoring:</h3>
+                  <ul className="list-disc pl-3 sm:pl-4 space-y-0.5 text-xs sm:text-sm">
+                    <li>Longer words = more points</li>
+                    <li>Chain length bonus</li>
+                    <li>Thematic relevance required</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="font-bold mb-1 text-xs sm:text-sm">Controls:</h3>
+                  <ul className="list-disc pl-3 sm:pl-4 space-y-0.5 text-xs sm:text-sm">
+                    <li>Tap any letters to select them</li>
+                    <li>Tap last letter to deselect</li>
+                    <li>Use Submit/Clear buttons</li>
                   </ul>
                 </div>
                 
                 <button
-                  className="w-full py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md font-medium mt-2"
+                  className="w-full py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md font-medium mt-4 text-sm sm:text-base"
                   onClick={() => setShowRules(false)}
                 >
                   Got it!
@@ -163,8 +174,9 @@ const Header: React.FC = () => {
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </header>
   );
 };

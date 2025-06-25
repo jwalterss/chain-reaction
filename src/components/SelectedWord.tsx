@@ -63,11 +63,6 @@ const SelectedWord: React.FC = () => {
                     {selectedWord}
                   </motion.span>
 
-                  {isValidLength && isAssociated && associationStrength && (
-                      <span className="text-xs mt-1 opacity-80">
-                  {associationStrength} association
-                </span>
-                  )}
                 </>
             ) : (
                 <span className="text-gray-400 dark:text-gray-500 text-sm">
@@ -86,21 +81,9 @@ const SelectedWord: React.FC = () => {
                   exit={{ opacity: 0, height: 0 }}
                   className="text-sm mt-1"
               >
-                {!isValidLength && selectedWord.length > 0 && (
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {3 - selectedWord.length} more letter{3 - selectedWord.length !== 1 ? 's' : ''} needed
-                    </p>
-                )}
-
                 {isValidLength && isAlreadyUsed && (
                     <p className="text-warning-600 dark:text-warning-400">
                       Word already used
-                    </p>
-                )}
-
-                {isValidLength && !isAlreadyUsed && !isAssociated && (
-                    <p className="text-error-600 dark:text-error-400">
-                      Not associated with "{currentWord}"
                     </p>
                 )}
 

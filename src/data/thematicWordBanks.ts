@@ -137,7 +137,6 @@ export const thematicWordBanks: ThematicWordBank = {
     { word: 'proctored', difficulty: 'hard', category: 'supervision' },
     { word: 'invigilation', difficulty: 'hard', category: 'supervision' },
   ],
-
   music: [
     // Easy
     { word: 'song', difficulty: 'easy', category: 'composition' },

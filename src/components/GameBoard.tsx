@@ -27,9 +27,6 @@ const GameBoard: React.FC = () => {
       {/* Selected word display */}
       <SelectedWord />
       
-      {/* Submit button */}
-      <SubmitButton />
-      
       {/* Letter grid for selection */}
       <div className="w-full max-w-sm sm:max-w-md mx-auto">
         <LetterGrid />

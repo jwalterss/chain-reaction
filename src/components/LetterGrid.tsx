@@ -70,9 +70,9 @@ const LetterGrid: React.FC = () => {
   };
 
   return (
-      <div className="mx-auto max-w-lg p-2 sm:p-4">
+      <div className="flex justify-center items-center p-2 sm:p-4">
         {/* Expanded 6x6 grid with optimal sizing */}
-        <div className={`grid ${gridSize === 6 ? 'grid-cols-6' : 'grid-cols-5'} gap-1 justify-center`}>
+        <div className={`grid ${gridSize === 6 ? 'grid-cols-6' : 'grid-cols-5'} gap-1 justify-items-center`}>
           {grid.flat().map((cell, index) => {
             const rowIndex = Math.floor(index / gridSize);
             const colIndex = index % gridSize;
@@ -81,27 +81,19 @@ const LetterGrid: React.FC = () => {
                 <motion.div
                     key={`cell-${rowIndex}-${colIndex}`}
                     className={`
-                letter-tile w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center 
-                rounded-lg text-lg sm:text-2xl font-bold shadow-md
+                letter-tile w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center 
+                rounded-lg text-xl sm:text-3xl font-bold
                 ${cell.selected
-                        ? 'bg-primary-500 dark:bg-primary-600 text-white'
-                        : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'}
+                        ? 'bg-primary-500 dark:bg-primary-600 text-white shadow-lg ring-2 ring-primary-300 dark:ring-primary-400'
+                        : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-md hover:shadow-lg'}
                 ${cell.used ? 'opacity-50' : 'opacity-100'}
                 transition-all duration-200 ease-in-out
               `}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{
-                      scale: cell.selected ? 1.1 : 1,
-                      opacity: 1,
-                    }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 300,
-                      damping: 15,
-                      delay: index * 0.02
-                    }}
-                    whileHover={{ scale: cell.selected ? 1.1 : 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.02 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => handleCellClick(rowIndex, colIndex)}
                 >
                   <span className="uppercase">{cell.letter}</span>
@@ -115,27 +107,6 @@ const LetterGrid: React.FC = () => {
           })}
         </div>
 
-        {/* Button to submit word */}
-        {selectedLetters.length >= 3 && (
-            <div className="flex justify-center mt-2 sm:mt-6 gap-2">
-              <motion.button
-                  className="px-3 py-1 sm:px-6 sm:py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md shadow-md font-medium text-sm sm:text-base"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => dispatch({ type: 'SUBMIT_WORD' })}
-              >
-                Submit Word
-              </motion.button>
-              <motion.button
-                  className="px-3 py-1 sm:px-6 sm:py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md shadow-md font-medium text-sm sm:text-base"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => dispatch({ type: 'CLEAR_SELECTION' })}
-              >
-                Clear
-              </motion.button>
-            </div>
-        )}
       </div>
   );
 };

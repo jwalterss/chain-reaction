@@ -70,9 +70,9 @@ const LetterGrid: React.FC = () => {
   };
 
   return (
-      <div className="mx-auto max-w-lg p-4">
+      <div className="mx-auto max-w-lg p-2 sm:p-4">
         {/* Expanded 6x6 grid with optimal sizing */}
-        <div className={`grid ${gridSize === 6 ? 'grid-cols-6' : 'grid-cols-5'} gap-2`}>
+        <div className={`grid ${gridSize === 6 ? 'grid-cols-6' : 'grid-cols-5'} gap-1 justify-center`}>
           {grid.flat().map((cell, index) => {
             const rowIndex = Math.floor(index / gridSize);
             const colIndex = index % gridSize;
@@ -81,8 +81,8 @@ const LetterGrid: React.FC = () => {
                 <motion.div
                     key={`cell-${rowIndex}-${colIndex}`}
                     className={`
-                letter-tile w-12 h-12 flex items-center justify-center 
-                rounded-lg text-xl font-bold shadow-md
+                letter-tile w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center 
+                rounded-lg text-lg sm:text-2xl font-bold shadow-md
                 ${cell.selected
                         ? 'bg-primary-500 dark:bg-primary-600 text-white'
                         : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'}
@@ -106,7 +106,7 @@ const LetterGrid: React.FC = () => {
                 >
                   <span className="uppercase">{cell.letter}</span>
                   {cell.selected && (
-                      <span className="absolute bottom-1 right-1 text-xs font-bold">
+                      <span className="absolute bottom-0 right-0 text-xs sm:text-xs font-bold bg-white text-primary-600 rounded-full w-4 h-4 flex items-center justify-center">
                   {getSelectionOrder(rowIndex, colIndex)}
                 </span>
                   )}
@@ -117,9 +117,9 @@ const LetterGrid: React.FC = () => {
 
         {/* Button to submit word */}
         {selectedLetters.length >= 3 && (
-            <div className="flex justify-center mt-6">
+            <div className="flex justify-center mt-2 sm:mt-6 gap-2">
               <motion.button
-                  className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md shadow-md font-medium"
+                  className="px-3 py-1 sm:px-6 sm:py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md shadow-md font-medium text-sm sm:text-base"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => dispatch({ type: 'SUBMIT_WORD' })}
@@ -127,7 +127,7 @@ const LetterGrid: React.FC = () => {
                 Submit Word
               </motion.button>
               <motion.button
-                  className="px-6 py-2 ml-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md shadow-md font-medium"
+                  className="px-3 py-1 sm:px-6 sm:py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md shadow-md font-medium text-sm sm:text-base"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => dispatch({ type: 'CLEAR_SELECTION' })}

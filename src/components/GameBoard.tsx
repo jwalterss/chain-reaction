@@ -10,16 +10,16 @@ const GameBoard: React.FC = () => {
   const { currentWord } = state;
 
   return (
-    <div className="flex flex-col items-center space-y-6 animate-fade-in">
+    <div className="flex flex-col items-center space-y-2 sm:space-y-6 animate-fade-in px-2 sm:px-4">
       {/* Word chain visualization */}
-      <div className="w-full bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
+      <div className="w-full bg-white dark:bg-gray-800 rounded-xl shadow-md p-2 sm:p-4 mb-2 sm:mb-4">
         <WordChain />
       </div>
       
       {/* Current active word */}
       <div className="text-center">
-        <h2 className="text-lg text-gray-600 dark:text-gray-400 mb-1">Current Word</h2>
-        <div className="text-3xl font-bold font-serif text-primary-600 dark:text-primary-400 mb-4">
+        <h2 className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 mb-1">Current Word</h2>
+        <div className="text-xl sm:text-3xl font-bold font-serif text-primary-600 dark:text-primary-400 mb-2 sm:mb-4">
           {currentWord}
         </div>
       </div>
@@ -31,7 +31,7 @@ const GameBoard: React.FC = () => {
       <SubmitButton />
       
       {/* Letter grid for selection */}
-      <div className="w-full max-w-md mx-auto">
+      <div className="w-full max-w-sm sm:max-w-md mx-auto">
         <LetterGrid />
       </div>
     </div>

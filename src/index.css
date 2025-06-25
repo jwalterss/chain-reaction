@@ -189,15 +189,61 @@ body {
 
 @media (max-width: 768px) {
   :root {
-    --hexagon-size: 45px;
+    --hexagon-size: 35px;
   }
   
   .selected-word {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
+    margin: 0.5rem 0;
+    min-height: 2rem;
   }
   
   .results-container {
-    margin: 1rem;
+    margin: 0.5rem;
     padding: 1rem;
+  }
+  
+  .letter-tile {
+    width: 44px;
+    height: 44px;
+    text-align: center;
+    font-size: 1.125rem;
+  }
+  
+  .game-header {
+    padding: 0.5rem;
+  }
+  
+  .word-network {
+    height: 150px;
+    margin: 0.5rem auto;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --hexagon-size: 30px;
+  }
+  
+  .selected-word {
+    font-size: 1rem;
+    margin: 0.25rem 0;
+    min-height: 1.5rem;
+  }
+  
+  .letter-tile {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  .word-network {
+    height: 120px;
+    margin: 0.25rem auto;
+  }
+  
+  .results-container {
+    margin: 0.25rem;
+    padding: 0.75rem;
   }
 }

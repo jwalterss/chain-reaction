@@ -1,14 +1,18 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { format } from 'date-fns';
 import seedrandom from 'seedrandom';
 import {
   wordAssociations,
-  areWordsAssociated,
   getAssociationDetails,
-  calculateAssociationScore,
   type WordAssociation,
-  type WordAssociationsMap
-} from '../data/wordAssociations';
+} from '../data/expandedWordAssociations';
+import {
+  getWordsForGrid,
+  isValidThematicWord,
+  thematicWordBanks,
+  getThematicWords,
+} from '../data/thematicWordBanks';
 
 // Type definitions
 export type WordNode = {
@@ -25,6 +29,7 @@ export type GameState = {
   score: number;
   timer: number;
   currentWord: string;
+  baseWord: string; // The original thematic word that all others must relate to
   wordChain: WordNode[];
   letterGrid: string[];
   selectedLetters: number[];
@@ -57,10 +62,7 @@ type GameContextType = {
 
 // Constants
 const GAME_DURATION = 120; // 2 minutes in seconds
-const DAILY_WORDS = Object.keys(wordAssociations).filter(word =>
-    // Filter to words that have at least 8 associations
-    wordAssociations[word] && wordAssociations[word].length >= 8
-);
+const DAILY_WORDS = Object.keys(thematicWordBanks); // Use words that have thematic banks
 
 // Helper functions
 const getTodayFormatted = () => format(new Date(), 'yyyy-MM-dd');
@@ -73,65 +75,164 @@ const getDailyWord = (): string => {
   return DAILY_WORDS[index];
 };
 
-// Generate an improved grid of letters that includes many possible associations
+// Calculate thematic score based on word length and chain progression
+const calculateThematicScore = (wordLength: number, chainLength: number): number => {
+  // Base score for word length
+  let score = wordLength * 10;
+  
+  // Bonus for longer chains (progression gets harder)
+  score += chainLength * 5;
+  
+  // Bonus for longer words
+  if (wordLength >= 6) score += 20;
+  if (wordLength >= 8) score += 40;
+  
+  return score;
+};
+
+// Generate letter grid optimized for thematic words
+const generateThematicLetterGrid = (baseWord: string, chainLength: number, usedWords: string[]): string[] => {
+  // Get thematic words that could be formed
+  const thematicWords = getWordsForGrid(baseWord, chainLength, usedWords, 20);
+  
+  // If no thematic words available, fall back to basic grid
+  if (thematicWords.length === 0) {
+    const commonLetters = 'eariotnslcudpmhgbfywkvxzjq';
+    return Array(36).fill('').map(() =>
+        commonLetters[Math.floor(Math.random() * commonLetters.length)]
+    );
+  }
+  
+  // Count letter frequency across thematic words
+  const letterFrequency = new Map<string, number>();
+  thematicWords.forEach(word => {
+    word.toLowerCase().split('').forEach(letter => {
+      letterFrequency.set(letter, (letterFrequency.get(letter) || 0) + 1);
+    });
+  });
+  
+  // Build letters array with frequency-based distribution
+  const letters: string[] = [];
+  
+  // Add letters based on thematic word frequency
+  for (const [letter, frequency] of letterFrequency.entries()) {
+    const timesToAdd = Math.min(4, Math.max(1, Math.ceil(frequency / 2)));
+    for (let i = 0; i < timesToAdd; i++) {
+      letters.push(letter);
+    }
+  }
+  
+  // Ensure essential letters are present
+  const essentialLetters = ['a', 'e', 'i', 'o', 'u', 'r', 'n', 's', 't', 'l', 'd', 'g', 'c', 'm', 'p', 'b', 'f', 'h', 'v', 'w', 'y', 'k', 'j', 'x', 'q', 'z'];
+  essentialLetters.forEach(letter => {
+    if (!letters.includes(letter) && letters.length < 32) {
+      letters.push(letter);
+    }
+  });
+  
+  // Fill remaining spaces with high-frequency letters
+  const highFreqLetters = 'eariotnslcudpmhgbfywkjxqz';
+  let freqIndex = 0;
+  
+  while (letters.length < 36) {
+    const nextLetter = highFreqLetters[freqIndex % highFreqLetters.length];
+    letters.push(nextLetter);
+    freqIndex++;
+  }
+  
+  // Shuffle for randomness
+  return letters.sort(() => Math.random() - 0.5);
+};
+
+// Legacy function for backward compatibility (now uses thematic approach) 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const generateLetterGrid = (word: string): string[] => {
   const associations = wordAssociations[word.toLowerCase()] || [];
 
-  // If no associations found, return random letters
+  // If no associations found, return balanced letter distribution
   if (associations.length === 0) {
-    return Array(25).fill('').map(() =>
-        'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]
+    const commonLetters = 'eariotnslcudpmhgbfywkvxzjq';
+    return Array(36).fill('').map(() =>
+        commonLetters[Math.floor(Math.random() * commonLetters.length)]
     );
   }
 
-  // Sort associations by strength to prioritize stronger associations
-  const sortedAssociations = [...associations].sort((a, b) => b.strength - a.strength);
-
-  // Take the top associations to include in the grid
-  // Ensure we include at least 3-5 strong associations to avoid dead ends
-  const targetAssociationCount = Math.min(5, sortedAssociations.length);
-  const targetAssociations = sortedAssociations.slice(0, targetAssociationCount);
-
-  // Always include letters for at least 3 different association words
-  const wordsToInclude = targetAssociations.map(assoc => assoc.word);
-
-  // Create a set of all unique letters needed for these words
-  const requiredLetters = new Set<string>();
+  // Include ALL associations for maximum word formation possibilities
+  const allAssociations = [...associations];
+  
+  // For legacy compatibility, try to use thematic words if available
+  const thematicWords = Object.keys(thematicWordBanks).includes(word.toLowerCase()) 
+    ? getWordsForGrid(word.toLowerCase(), 1, [], 15)
+    : [];
+  
+  let wordsToInclude = thematicWords.length > 0 
+    ? thematicWords 
+    : allAssociations.map(assoc => assoc.word);
+  
+  // Add common word variations for ALL words
+  const wordVariations: string[] = [];
   wordsToInclude.forEach(word => {
-    word.toLowerCase().split('').forEach(letter => requiredLetters.add(letter));
+    if (word.length <= 8) { // Expanded length limit
+      // Add more variations
+      wordVariations.push(word + 'ed');
+      wordVariations.push(word + 'ing'); 
+      wordVariations.push(word + 's');
+      wordVariations.push(word + 'er');
+      wordVariations.push(word + 'est');
+      wordVariations.push(word + 'ly');
+      wordVariations.push(word + 'ion');
+      wordVariations.push(word + 'al');
+      
+      // Add prefixes too
+      if (word.length <= 6) {
+        wordVariations.push('un' + word);
+        wordVariations.push('re' + word);
+        wordVariations.push('pre' + word);
+      }
+    }
+  });
+  
+  // Include all variations
+  wordsToInclude = [...wordsToInclude, ...wordVariations];
+
+  // Count letter frequency across ALL words
+  const letterFrequency = new Map<string, number>();
+  wordsToInclude.forEach(word => {
+    word.toLowerCase().split('').forEach(letter => {
+      letterFrequency.set(letter, (letterFrequency.get(letter) || 0) + 1);
+    });
   });
 
-  // Convert to array and ensure we don't exceed 25 cells
-  let letters = Array.from(requiredLetters);
-
-  // If we have too many letters, prioritize the most important words
-  if (letters.length > 25) {
-    // Just get the most important associations
-    requiredLetters.clear();
-    for (let i = 0; i < Math.min(3, wordsToInclude.length); i++) {
-      wordsToInclude[i].toLowerCase().split('').forEach(letter =>
-          requiredLetters.add(letter)
-      );
-
-      // Break early if we're approaching 25 letters
-      if (requiredLetters.size >= 20) break;
+  // Build comprehensive letters array
+  const letters: string[] = [];
+  
+  // Add all letters from associations with frequency-based duplicates
+  for (const [letter, frequency] of letterFrequency.entries()) {
+    const timesToAdd = Math.min(4, Math.max(1, Math.ceil(frequency / 3)));
+    for (let i = 0; i < timesToAdd; i++) {
+      letters.push(letter);
     }
-    letters = Array.from(requiredLetters);
   }
 
-  // Fill remaining spaces with common letters to help form more words
-  const commonLetters = 'eariotnslcudpmhgbfywkvxzjq'; // Ordered by frequency
-  let commonIndex = 0;
-
-  while (letters.length < 25) {
-    const nextLetter = commonLetters[commonIndex % commonLetters.length];
-    if (!letters.includes(nextLetter)) {
-      letters.push(nextLetter);
+  // Ensure all essential English letters are present (expanded set)
+  const essentialLetters = ['a', 'e', 'i', 'o', 'u', 'r', 'n', 's', 't', 'l', 'd', 'g', 'c', 'm', 'p', 'b', 'f', 'h', 'v', 'w', 'y', 'k', 'j', 'x', 'q', 'z'];
+  essentialLetters.forEach(letter => {
+    if (!letters.includes(letter) && letters.length < 32) {
+      letters.push(letter);
     }
-    commonIndex++;
+  });
+
+  // Fill remaining spaces with high-frequency letters for word formation
+  const highFreqLetters = 'eariotnslcudpmhgbfywkjxqz';
+  let freqIndex = 0;
+
+  while (letters.length < 36) { // Expanded to 6x6 grid
+    const nextLetter = highFreqLetters[freqIndex % highFreqLetters.length];
+    letters.push(nextLetter);
+    freqIndex++;
   }
 
-  // Shuffle the letters for the grid
+  // Shuffle for randomness but ensure good distribution
   return letters.sort(() => Math.random() - 0.5);
 };
 
@@ -145,9 +246,19 @@ const getInitialState = (): GameState => {
   if (savedState) {
     const parsed = JSON.parse(savedState);
 
-    // Only restore state if it's from today
-    if (parsed.startDate === today) {
+    // Only restore state if it's from today AND has the correct grid size AND has baseWord
+    if (parsed.startDate === today && parsed.letterGrid?.length === 36) {
+      // Ensure baseWord is set (for backward compatibility)
+      if (!parsed.baseWord) {
+        parsed.baseWord = parsed.dailyWord || dailyWord;
+      }
       return parsed;
+    }
+    
+    // If grid size is wrong, clear old state and start fresh
+    if (parsed.letterGrid?.length !== 36) {
+      console.log('Clearing old game state due to grid size change');
+      localStorage.removeItem('chainReactionGameState');
     }
 
     // For a new day, save streak data
@@ -157,6 +268,7 @@ const getInitialState = (): GameState => {
       score: 0,
       timer: GAME_DURATION,
       currentWord: dailyWord,
+      baseWord: dailyWord, // Set the thematic base word
       wordChain: [
         {
           id: 0,
@@ -166,7 +278,7 @@ const getInitialState = (): GameState => {
           score: 0,
         },
       ],
-      letterGrid: generateLetterGrid(dailyWord),
+      letterGrid: generateThematicLetterGrid(dailyWord, 1, [dailyWord]),
       selectedLetters: [],
       selectedWord: '',
       streakCount: calculateStreak(parsed.lastPlayedDate, today, parsed.streakCount),
@@ -183,6 +295,7 @@ const getInitialState = (): GameState => {
     score: 0,
     timer: GAME_DURATION,
     currentWord: dailyWord,
+    baseWord: dailyWord, // Set the thematic base word
     wordChain: [
       {
         id: 0,
@@ -192,7 +305,7 @@ const getInitialState = (): GameState => {
         score: 0,
       },
     ],
-    letterGrid: generateLetterGrid(dailyWord),
+    letterGrid: generateThematicLetterGrid(dailyWord, 1, [dailyWord]),
     selectedLetters: [],
     selectedWord: '',
     streakCount: 0,
@@ -312,9 +425,6 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       };
 
     case 'SUBMIT_WORD': {
-      // Get the current active word
-      const currentWordIndex = state.wordChain.findIndex(node => node.isActive);
-      const currentWord = state.wordChain[currentWordIndex]?.word || '';
 
       // Check validity conditions
       if (
@@ -329,8 +439,8 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         };
       }
 
-      // Check if words are associated
-      if (!areWordsAssociated(currentWord, state.selectedWord, wordAssociations)) {
+      // Check if word is thematically valid (relates to the base word)
+      if (!isValidThematicWord(state.baseWord, state.selectedWord)) {
         return {
           ...state,
           selectedLetters: [],
@@ -338,12 +448,8 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         };
       }
 
-      // Get association details for scoring
-      const association = getAssociationDetails(currentWord, state.selectedWord, wordAssociations);
-
-      // Calculate score for this word
-      const wordScore = calculateAssociationScore(
-          association,
+      // Calculate thematic score
+      const wordScore = calculateThematicScore(
           state.selectedWord.length,
           state.wordChain.length
       );
@@ -373,8 +479,9 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       // Add new node to chain
       updatedChain.push(newNode);
 
-      // Generate new letter grid based on the new word
-      const newLetterGrid = generateLetterGrid(state.selectedWord);
+      // Generate new letter grid based on thematic words
+      const usedWords = [...state.wordChain.map(node => node.word), state.selectedWord];
+      const newLetterGrid = generateThematicLetterGrid(state.baseWord, state.wordChain.length + 1, usedWords);
 
       return {
         ...state,
@@ -397,6 +504,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         score: 0,
         timer: GAME_DURATION,
         currentWord: dailyWord,
+        baseWord: dailyWord, // Set the thematic base word
         wordChain: [
           {
             id: 0,
@@ -406,7 +514,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             score: 0,
           },
         ],
-        letterGrid: generateLetterGrid(dailyWord),
+        letterGrid: generateThematicLetterGrid(dailyWord, 1, [dailyWord]),
         selectedLetters: [],
         selectedWord: '',
         streakCount: state.streakCount, // Preserve streak
@@ -458,51 +566,34 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Helper functions exposed in context
   const isValidWord = (word: string): boolean => {
     return word.length >= 3 &&
-        Object.keys(wordAssociations).includes(word.toLowerCase());
+        isValidThematicWord(state.baseWord, word);
   };
 
   const isAssociatedWithCurrentWord = (word: string): boolean => {
     if (!word || word.length < 3) return false;
 
-    const currentNode = state.wordChain.find(node => node.isActive);
-    if (!currentNode) return false;
-
-    return areWordsAssociated(currentNode.word, word, wordAssociations);
+    // In thematic mode, all words must relate to the base word, not just the current word
+    return isValidThematicWord(state.baseWord, word);
   };
 
   const getWordScore = (word: string): number => {
     if (!word || word.length < 3) return 0;
 
-    const currentNode = state.wordChain.find(node => node.isActive);
-    if (!currentNode) return 0;
-
-    const association = getAssociationDetails(currentNode.word, word, wordAssociations);
-    return calculateAssociationScore(association, word.length, state.wordChain.length);
+    return calculateThematicScore(word.length, state.wordChain.length);
   };
 
-  const getAssociationDetails = (word1: string, word2: string): WordAssociation | null => {
+  const getAssociationDetailsLocal = (word1: string, word2: string): WordAssociation | null => {
     if (!word1 || !word2) return null;
     return getAssociationDetails(word1, word2, wordAssociations);
   };
 
-  // NEW FUNCTION: Get all possible associations for a word
+  // Get all possible thematic words for the current base word
   // Useful for debugging and potentially for hints
-  const getPossibleAssociations = (word: string): string[] => {
-    if (!word) return [];
-
-    const wordLower = word.toLowerCase();
-    const directAssociations = wordAssociations[wordLower]?.map(a => a.word) || [];
-
-    // Also find reverse associations (words that have this as an association)
-    const reverseAssociations: string[] = [];
-    Object.entries(wordAssociations).forEach(([otherWord, associations]) => {
-      if (otherWord !== wordLower &&
-          associations.some(a => a.word.toLowerCase() === wordLower)) {
-        reverseAssociations.push(otherWord);
-      }
-    });
-
-    return [...new Set([...directAssociations, ...reverseAssociations])];
+  const getPossibleAssociations = (): string[] => {
+    // In thematic mode, get all words that relate to the base word
+    const usedWords = state.wordChain.map(node => node.word);
+    const thematicWords = getThematicWords(state.baseWord, state.wordChain.length, usedWords);
+    return thematicWords.map(tw => tw.word);
   };
 
   return (
@@ -513,7 +604,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isValidWord,
             isAssociatedWithCurrentWord,
             getWordScore,
-            getAssociationDetails,
+            getAssociationDetails: getAssociationDetailsLocal,
             getPossibleAssociations,
           }}
       >

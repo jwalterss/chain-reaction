@@ -16,11 +16,17 @@ const LetterGrid: React.FC = () => {
 
   // Convert flat array to 2D grid
   const [grid, setGrid] = useState<Cell[][]>([]);
-  const gridSize = 5; // 5x5 grid
+  
+  // Determine grid size based on letter count
+  const gridSize = letterGrid?.length === 36 ? 6 : 5;
+  const expectedLetters = gridSize * gridSize;
 
   // Fill grid when letterGrid changes
   useEffect(() => {
-    if (!letterGrid || letterGrid.length !== gridSize * gridSize) return;
+    if (!letterGrid || letterGrid.length < expectedLetters) {
+      console.log('Letter grid mismatch:', letterGrid?.length, 'expected:', expectedLetters);
+      return;
+    }
 
     const newGrid: Cell[][] = [];
     for (let i = 0; i < gridSize; i++) {
@@ -38,7 +44,7 @@ const LetterGrid: React.FC = () => {
       newGrid.push(row);
     }
     setGrid(newGrid);
-  }, [letterGrid, selectedLetters]);
+  }, [letterGrid, selectedLetters, expectedLetters, gridSize]);
 
   // Handle cell click/touch with no restrictions
   const handleCellClick = (rowIndex: number, colIndex: number) => {
@@ -64,9 +70,9 @@ const LetterGrid: React.FC = () => {
   };
 
   return (
-      <div className="mx-auto max-w-md p-4">
-        {/* Perfectly uniform grid with consistent sizing */}
-        <div className="grid grid-cols-5 gap-3">
+      <div className="mx-auto max-w-lg p-4">
+        {/* Expanded 6x6 grid with optimal sizing */}
+        <div className={`grid ${gridSize === 6 ? 'grid-cols-6' : 'grid-cols-5'} gap-2`}>
           {grid.flat().map((cell, index) => {
             const rowIndex = Math.floor(index / gridSize);
             const colIndex = index % gridSize;
@@ -75,8 +81,8 @@ const LetterGrid: React.FC = () => {
                 <motion.div
                     key={`cell-${rowIndex}-${colIndex}`}
                     className={`
-                letter-tile w-14 h-14 flex items-center justify-center 
-                rounded-lg text-2xl font-bold shadow-md
+                letter-tile w-12 h-12 flex items-center justify-center 
+                rounded-lg text-xl font-bold shadow-md
                 ${cell.selected
                         ? 'bg-primary-500 dark:bg-primary-600 text-white'
                         : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'}

@@ -2,11 +2,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { format } from 'date-fns';
 import seedrandom from 'seedrandom';
-import {
-  wordAssociations,
-  getAssociationDetails,
-  type WordAssociation,
-} from '../data/expandedWordAssociations';
+import { wordAssociations, getAssociationDetails, type WordAssociation,} from '../data/expandedWordAssociations';
 import {
   getWordsForGrid,
   isValidThematicWord,

@@ -66,7 +66,7 @@ type GameContextType = {
 // Constants
 const GAME_DURATION = 120; // 2 minutes in seconds
 const USE_JSON_ASSOCIATIONS = true; // Toggle between old and new system
-const CONNECTION_BASE_WORD = 'connection'; // Single base word with thousands of associations
+const CONNECTION_BASE_WORD = 'food'; // Single base word with thousands of associations
 
 // Helper functions
 const getTodayFormatted = () => format(new Date(), 'yyyy-MM-dd');
@@ -74,7 +74,7 @@ const getTodayFormatted = () => format(new Date(), 'yyyy-MM-dd');
 // Get a deterministic word for today based on date
 const getDailyWord = (): string => {
   if (USE_JSON_ASSOCIATIONS) {
-    return CONNECTION_BASE_WORD; // Always use 'connection' as the base word
+    return CONNECTION_BASE_WORD; // Always use 'food' as the base word
   }
   // Fall back to old system if needed
   const DAILY_WORDS = Object.keys(thematicWordBanks);

@@ -6,11 +6,8 @@ import Footer from './components/Footer';
 
 function App() {
   useEffect(() => {
-    // Check if the user has a saved theme preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (prefersDark) {
-      document.documentElement.classList.add('dark');
-    }
+    // Default to dark mode
+    document.documentElement.classList.add('dark');
   }, []);
 
   return (

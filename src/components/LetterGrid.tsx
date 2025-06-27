@@ -70,9 +70,12 @@ const LetterGrid: React.FC = () => {
   };
 
   return (
-      <div className="flex justify-center items-center p-2 sm:p-4">
-        {/* Expanded 6x6 grid with optimal sizing */}
-        <div className={`grid ${gridSize === 6 ? 'grid-cols-6' : 'grid-cols-5'} gap-1 justify-items-center`}>
+      <div className="w-full p-1 sm:p-2">
+        {/* Responsive grid that fills container */}
+        <div className={`
+          grid gap-1 sm:gap-2 w-full max-w-full
+          ${gridSize === 6 ? 'grid-cols-6' : 'grid-cols-5'}
+        `}>
           {grid.flat().map((cell, index) => {
             const rowIndex = Math.floor(index / gridSize);
             const colIndex = index % gridSize;
@@ -81,13 +84,15 @@ const LetterGrid: React.FC = () => {
                 <motion.div
                     key={`cell-${rowIndex}-${colIndex}`}
                     className={`
-                letter-tile w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center 
-                rounded-lg text-xl sm:text-3xl font-bold
+                letter-tile aspect-square flex items-center justify-center 
+                rounded-lg text-lg sm:text-2xl lg:text-3xl font-bold
+                min-h-[3rem] sm:min-h-[4rem] lg:min-h-[5rem]
                 ${cell.selected
                         ? 'bg-primary-500 dark:bg-primary-600 text-white shadow-lg ring-2 ring-primary-300 dark:ring-primary-400'
                         : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-md hover:shadow-lg'}
                 ${cell.used ? 'opacity-50' : 'opacity-100'}
                 transition-all duration-200 ease-in-out
+                cursor-pointer touch-manipulation
               `}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -96,9 +101,9 @@ const LetterGrid: React.FC = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleCellClick(rowIndex, colIndex)}
                 >
-                  <span className="uppercase">{cell.letter}</span>
+                  <span className="uppercase select-none">{cell.letter}</span>
                   {cell.selected && (
-                      <span className="absolute bottom-0 right-0 text-xs sm:text-xs font-bold bg-white text-primary-600 rounded-full w-4 h-4 flex items-center justify-center">
+                      <span className="absolute bottom-0 right-0 text-xs font-bold bg-white text-primary-600 rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
                   {getSelectionOrder(rowIndex, colIndex)}
                 </span>
                   )}

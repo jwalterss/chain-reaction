@@ -1,29 +1,15 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useGame } from '../context/GameContext';
-import { SunMoon, Menu, X, HelpCircle } from 'lucide-react';
+import { Menu, X, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Header: React.FC = () => {
   const { state } = useGame();
   const { streakCount } = state;
   
-  const [isDarkMode, setIsDarkMode] = useState(
-    document.documentElement.classList.contains('dark')
-  );
-  
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showRules, setShowRules] = useState(false);
-  
-  const toggleDarkMode = () => {
-    if (isDarkMode) {
-      document.documentElement.classList.remove('dark');
-      setIsDarkMode(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      setIsDarkMode(true);
-    }
-  };
   
   return (
     <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
@@ -48,27 +34,11 @@ const Header: React.FC = () => {
             </div>
           )}
           
-          <div className="hidden md:flex space-x-2">
-            <button 
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-              onClick={() => setShowRules(true)}
-            >
-              <HelpCircle size={20} />
-            </button>
-            
-            <button 
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-              onClick={toggleDarkMode}
-            >
-              <SunMoon size={20} />
-            </button>
-          </div>
-          
           <button 
-            className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-            onClick={toggleDarkMode}
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+            onClick={() => setShowRules(true)}
           >
-            <SunMoon size={20} />
+            <HelpCircle size={20} />
           </button>
         </div>
       </div>

@@ -2,13 +2,20 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { format } from 'date-fns';
 import seedrandom from 'seedrandom';
-import { wordAssociations, getAssociationDetails, type WordAssociation,} from '../data/massiveWordAssociations';
+import { wordAssociations as oldWordAssociations, getAssociationDetails, type WordAssociation as OldWordAssociation,} from '../data/massiveWordAssociations';
 import {
   getWordsForGrid,
   isValidThematicWord,
   thematicWordBanks,
   getThematicWords,
 } from '../data/thematicWordBanks';
+import {
+  wordAssociations,
+  isValidWord as isValidConnectionWord,
+  getWordInfo,
+  getWordsForChainLength,
+  type WordAssociation,
+} from '../data/wordAssociationsLoader';
 
 // Type definitions
 export type WordNode = {
@@ -58,13 +65,19 @@ type GameContextType = {
 
 // Constants
 const GAME_DURATION = 120; // 2 minutes in seconds
-const DAILY_WORDS = Object.keys(thematicWordBanks); // Use words that have thematic banks
+const USE_JSON_ASSOCIATIONS = true; // Toggle between old and new system
+const CONNECTION_BASE_WORD = 'connection'; // Single base word with thousands of associations
 
 // Helper functions
 const getTodayFormatted = () => format(new Date(), 'yyyy-MM-dd');
 
 // Get a deterministic word for today based on date
 const getDailyWord = (): string => {
+  if (USE_JSON_ASSOCIATIONS) {
+    return CONNECTION_BASE_WORD; // Always use 'connection' as the base word
+  }
+  // Fall back to old system if needed
+  const DAILY_WORDS = Object.keys(thematicWordBanks);
   const today = getTodayFormatted();
   const rng = seedrandom(today);
   const index = Math.floor(rng() * DAILY_WORDS.length);
@@ -86,9 +99,70 @@ const calculateThematicScore = (wordLength: number, chainLength: number): number
   return score;
 };
 
+// Generate letter grid optimized for connection words
+const generateConnectionLetterGrid = (chainLength: number, usedWords: string[]): string[] => {
+  // Get words appropriate for current difficulty
+  const availableWords = getWordsForChainLength(chainLength);
+  
+  // Filter out already used words
+  const possibleWords = availableWords.filter(
+    wa => !usedWords.some(used => used.toLowerCase() === wa.word.toLowerCase())
+  );
+  
+  // Take a sample of possible words (limit to prevent too easy grid)
+  const sampleSize = Math.min(20, Math.max(10, 20 - chainLength));
+  const sampledWords = possibleWords
+    .sort(() => Math.random() - 0.5)
+    .slice(0, sampleSize);
+  
+  // Count letter frequency
+  const letterFrequency = new Map<string, number>();
+  sampledWords.forEach(wordAssoc => {
+    wordAssoc.word.toLowerCase().split('').forEach(letter => {
+      if (letter.match(/[a-z]/)) {
+        letterFrequency.set(letter, (letterFrequency.get(letter) || 0) + 1);
+      }
+    });
+  });
+  
+  // Build letter grid
+  const letters: string[] = [];
+  
+  // Add letters based on frequency
+  for (const [letter, frequency] of letterFrequency.entries()) {
+    const timesToAdd = Math.min(4, Math.max(1, Math.ceil(frequency / 2)));
+    for (let i = 0; i < timesToAdd; i++) {
+      letters.push(letter);
+    }
+  }
+  
+  // Ensure essential letters
+  const essentialLetters = 'aeiournstlcdgmphbfvwykjxqz'.split('');
+  essentialLetters.forEach(letter => {
+    if (!letters.includes(letter) && letters.length < 32) {
+      letters.push(letter);
+    }
+  });
+  
+  // Fill remaining with common letters
+  const commonLetters = 'eariotnslcudpmhgbfywkvxzjq';
+  let index = 0;
+  while (letters.length < 36) {
+    letters.push(commonLetters[index % commonLetters.length]);
+    index++;
+  }
+  
+  return letters.sort(() => Math.random() - 0.5);
+};
+
 // Generate letter grid optimized for thematic words
 const generateThematicLetterGrid = (baseWord: string, chainLength: number, usedWords: string[]): string[] => {
-  // Get thematic words that could be formed
+  // If using JSON associations and base word is 'connection', use the new system
+  if (USE_JSON_ASSOCIATIONS && baseWord === CONNECTION_BASE_WORD) {
+    return generateConnectionLetterGrid(chainLength, usedWords);
+  }
+  
+  // Otherwise, use the old thematic system
   const thematicWords = getWordsForGrid(baseWord, chainLength, usedWords, 20);
   
   // If no thematic words available, fall back to basic grid
@@ -435,8 +509,12 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         };
       }
 
-      // Check if word is thematically valid (relates to the base word)
-      if (!isValidThematicWord(state.baseWord, state.selectedWord)) {
+      // Check if word is valid based on the system we're using
+      const wordIsValid = USE_JSON_ASSOCIATIONS && state.baseWord === CONNECTION_BASE_WORD
+        ? isValidConnectionWord(state.selectedWord)
+        : isValidThematicWord(state.baseWord, state.selectedWord);
+        
+      if (!wordIsValid) {
         return {
           ...state,
           selectedLetters: [],
@@ -561,15 +639,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper functions exposed in context
   const isValidWord = (word: string): boolean => {
-    return word.length >= 3 &&
-        isValidThematicWord(state.baseWord, word);
+    if (word.length < 3) return false;
+    
+    return USE_JSON_ASSOCIATIONS && state.baseWord === CONNECTION_BASE_WORD
+      ? isValidConnectionWord(word)
+      : isValidThematicWord(state.baseWord, word);
   };
 
   const isAssociatedWithCurrentWord = (word: string): boolean => {
     if (!word || word.length < 3) return false;
 
-    // In thematic mode, all words must relate to the base word, not just the current word
-    return isValidThematicWord(state.baseWord, word);
+    // Check based on which system we're using
+    return USE_JSON_ASSOCIATIONS && state.baseWord === CONNECTION_BASE_WORD
+      ? isValidConnectionWord(word)
+      : isValidThematicWord(state.baseWord, word);
   };
 
   const getWordScore = (word: string): number => {
@@ -586,8 +669,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Get all possible thematic words for the current base word
   // Useful for debugging and potentially for hints
   const getPossibleAssociations = (): string[] => {
-    // In thematic mode, get all words that relate to the base word
     const usedWords = state.wordChain.map(node => node.word);
+    
+    if (USE_JSON_ASSOCIATIONS && state.baseWord === CONNECTION_BASE_WORD) {
+      // Get words based on current difficulty level
+      const availableWords = getWordsForChainLength(state.wordChain.length);
+      return availableWords
+        .filter(wa => !usedWords.some(used => used.toLowerCase() === wa.word.toLowerCase()))
+        .map(wa => wa.word)
+        .slice(0, 50); // Limit to 50 words to avoid overwhelming
+    }
+    
+    // Use old thematic system
     const thematicWords = getThematicWords(state.baseWord, state.wordChain.length, usedWords);
     return thematicWords.map(tw => tw.word);
   };
